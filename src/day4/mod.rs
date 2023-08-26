@@ -1,4 +1,4 @@
-use std::io::{stdin, stdout, Result, Write};
+use crate::Part;
 
 struct Range {
     start: usize,
@@ -30,36 +30,45 @@ impl From<&str> for Range {
     }
 }
 
-fn main() {
 
-    let mut lines = stdin().lines();
-    
-    let total = overlapped_count(&mut lines);
-
-    let mut out = stdout().lock();
-    out.write_all(format!("{}\n", total).as_bytes())
-        .expect("should be able to write to stdout");
-}
-
-/// make sure we pass in `N+1` otherwise, we'll constantly overwrite the `N`th value instead of pushing it out.
-fn overlapped_count(lines: &mut dyn Iterator<Item=Result<String>>) -> usize {
+pub(crate) fn solve(mut input: Box<dyn Iterator<Item = String>>, part: Part) -> String {
     
     let mut overlap_total: usize = 0;
 
-    while let Some(Ok(line)) = lines.next() {
+    while let Some(line) = input.next() {
         if let Some((left, right)) = line.split_once(',') {
             let elf1:Range = left.into();
             let elf2:Range = right.into();
 
-            // if elf1.fully_overlaps(&elf2) ||
-            //     elf2.fully_overlaps(&elf1) {
-            //     overlap_total += 1;
-            // }
-            if elf1.has_overlap(&elf2) {
+            if match part {
+              Part::Part1 => elf1.fully_overlaps(&elf2) || elf2.fully_overlaps(&elf1),
+              Part::Part2 => elf1.has_overlap(&elf2),
+            } {
                 overlap_total += 1;
             }
         }
     }
 
-    overlap_total
+    format!("{}", overlap_total)
+}
+
+
+#[test]
+// sanity check vs example input
+fn test_input() {
+    const EXAMPLE: &str = r"2-4,6-8
+2-3,4-5
+5-7,7-9
+2-8,3-7
+6-6,4-6
+2-6,4-8";
+
+    let lines = EXAMPLE.split('\n')
+        .map(|item| String::from(item));
+
+    let output = solve(Box::new(lines.clone()), Part::Part1);
+    assert_eq!(output.as_str(), "2");
+    
+    let output = solve(Box::new(lines), Part::Part2);
+    assert_eq!(output.as_str(), "4");
 }

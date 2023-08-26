@@ -1,6 +1,7 @@
-use std::collections::VecDeque;
-use std::io::{stdin, stdout, Result, Write};
 use std::fmt::Display;
+use std::collections::VecDeque;
+
+use crate::Part;
 
 const LOWERCASE_OFFSET: u8 = 96;
 const UPPERCASE_OFFSET: u8 = 38;
@@ -64,31 +65,28 @@ impl Display for CharFlags {
 }
 
 
-fn main() {
-
-    let mut lines = stdin().lines();
+pub(crate) fn solve(mut input: Box<dyn Iterator<Item = String>>, part: Part) -> String {
     
-    let result = parse_packet_starting_idxes(&mut lines);
-
-    let mut out = stdout().lock();
-    out.write_all(format!("{}\n", result).as_bytes())
-        .expect("should be able to write to stdout");
-}
-
-fn parse_packet_starting_idxes(lines: &mut dyn Iterator<Item=Result<String>>) -> String {
-
     let mut idxes:Vec<usize> = Vec::new();
 
-    while let Some(Ok(line)) = lines.next() {
-        if let Some(idx) = find_start(&line) {
+    let packet_len: usize = match part {
+        Part::Part1 => 4,
+        Part::Part2 => 14,
+    };
+
+    while let Some(line) = input.next() {
+        if let Some(idx) = find_start(&line, packet_len) {
             idxes.push(idx);
         }
     }
 
-    format_args!("{:?}", idxes).to_string()
+    format!("{:?}", idxes)
+        .replace(",", "")
+        .trim_matches(|c| c == '[' || c == ']')
+        .to_string()
 }
 
-fn find_start(line: &String) -> Option<usize> {
+fn find_start(line: &String, len: usize) -> Option<usize> {
 
     let mut chars = line.char_indices();
     let mut buf: VecDeque<u8> = VecDeque::new();
@@ -100,10 +98,7 @@ fn find_start(line: &String) -> Option<usize> {
         c.encode_utf8(&mut byte);
         buf.push_back(byte.first().unwrap().to_owned());
 
-        // pt1
-        // if buf.len() == 4 {
-        // pt2
-        if buf.len() == 14 {
+        if buf.len() == len {
             let flags: CharFlags = (&buf).into();
             if !flags.has_dupes() {
                 return Some(i + 1);
@@ -121,24 +116,18 @@ fn find_start(line: &String) -> Option<usize> {
 #[test]
 // sanity check vs example input
 fn test_input() {
-    let file_contents: String = (r"bvwbjplbgvbhsrlpgdmjqwftvncz
+    const EXAMPLE: &str = r"mjqjpqmgbljsphdztnvjfqwrcgsmlb
+bvwbjplbgvbhsrlpgdmjqwftvncz
 nppdvjthqldpwncqszvftbrmjlhg
 nznrnfrfntjfmvfwmzdfjlvtqnbhcprsg
-zcfzfwzzqfrljwzlrfnpqdbhtmscgvjw
-").into();
-    let file_contents: Result<String> = Ok(file_contents);
+zcfzfwzzqfrljwzlrfnpqdbhtmscgvjw";
 
-    match file_contents {
-        Ok(input) => {
-            let mut lines = input.split('\n')
-                .map(|item| Ok(String::from(item)));
+    let lines = EXAMPLE.split('\n')
+        .map(|item| String::from(item));
 
-
-            let output = parse_packet_starting_idxes(&mut lines);
-
-            println!("output : {}", output);
-        },
-        Err(err) => println!("couldnt read input: {:?}", err),
-    }
-
+    let output = solve(Box::new(lines.clone()), Part::Part1);
+    assert_eq!(output.as_str(), "7 5 6 10 11");
+    
+    let output = solve(Box::new(lines), Part::Part2);
+    assert_eq!(output.as_str(), "19 23 23 29 26");
 }

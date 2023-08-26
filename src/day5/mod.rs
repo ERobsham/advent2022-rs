@@ -1,8 +1,14 @@
-use std::{io::{stdin, stdout, Result, Write}, collections::HashMap};
+use std::collections::HashMap;
 
+use crate::Part;
 
 type StackID = char;
 type CrateID = char;
+
+enum CraneType {
+    CrateMover9000,
+    CrateMover9001,
+}
 
 struct CrateState {
     // stack id => 'crates' in the stack
@@ -68,8 +74,9 @@ impl CrateState {
             }
         }
 
-        // uncomment for pt2
-        stack_to_move.reverse();
+        if let CraneType::CrateMover9001 = cmd.version {
+            stack_to_move.reverse();
+        }
 
         let dest = self.crate_stacks.get_mut(&cmd.to).expect("already checked");
         dest.extend(stack_to_move.iter());
@@ -106,6 +113,19 @@ struct Command {
     num: usize,
     from: StackID,
     to: StackID,
+    version: CraneType,
+}
+
+impl Command {
+    fn as_9000(mut self) -> Self {
+        self.version = CraneType::CrateMover9000;
+        self
+    }
+    
+    fn as_9001(mut self) -> Self {
+        self.version = CraneType::CrateMover9001;
+        self
+    }
 }
 
 impl From<String> for Command {
@@ -126,29 +146,17 @@ impl From<String> for Command {
             }
         }
 
-        return Command { num, from, to }
+        return Command { num, from, to, version: CraneType::CrateMover9000 }
     }
 }
 
 
 
-fn main() {
-
-    let mut lines = stdin().lines();
+pub(crate) fn solve(mut input: Box<dyn Iterator<Item = String>>, part: Part) -> String {
     
-    let total = calc_top_crates(&mut lines);
-
-    let mut out = stdout().lock();
-    out.write_all(format!("{}\n", total).as_bytes())
-        .expect("should be able to write to stdout");
-}
-
-
-fn calc_top_crates(lines: &mut dyn Iterator<Item=Result<String>>) -> String {
-
     // step 1: parse header to get initial state of crate stacks:
     let mut header_lines: Vec<String> = Vec::new();
-    while let Some(Ok(line)) = lines.next() {
+    while let Some(line) = input.next() {
         if line.is_empty() {
             break;
         }
@@ -157,13 +165,15 @@ fn calc_top_crates(lines: &mut dyn Iterator<Item=Result<String>>) -> String {
 
     let mut crates: CrateState = header_lines.into();
 
-
     // step 2: parse & apply each 'command'
-    while let Some(Ok(line)) = lines.next() {
+    while let Some(line) = input.next() {
         let cmd: Command = line.into();
-        crates.apply(cmd)
-    }
 
+        match part {
+            Part::Part1 => crates.apply(cmd.as_9000()),
+            Part::Part2 => crates.apply(cmd.as_9001()),
+        }
+    }
 
     // finally, just grab the 'top crate' for every stack
     crates.top_crates()
@@ -174,7 +184,7 @@ fn calc_top_crates(lines: &mut dyn Iterator<Item=Result<String>>) -> String {
 #[test]
 // sanity check vs example input
 fn test_input() {
-    let file_contents: String = (r"    [D]    
+    const EXAMPLE: &str = r"    [D]    
 [N] [C]    
 [Z] [M] [P]
  1   2   3 
@@ -182,22 +192,15 @@ fn test_input() {
 move 1 from 2 to 1
 move 3 from 1 to 3
 move 2 from 2 to 1
-move 1 from 1 to 2").into();
-    let file_contents: Result<String> = Ok(file_contents);
+move 1 from 1 to 2";
 
-    match file_contents {
-        Ok(input) => {
-            let mut lines = input.split('\n')
-                .map(|item| Ok(String::from(item)));
+    let lines = EXAMPLE.split('\n')
+        .map(|item| String::from(item));
 
 
-            let output = calc_top_crates(&mut lines);
-
-            println!("output : {}", output);
-
-            assert_eq!(output.as_str(), "CMZ");
-        },
-        Err(err) => println!("couldnt read input: {:?}", err),
-    }
-
+    let output = solve(Box::new(lines.clone()), Part::Part1);
+    assert_eq!(output.as_str(), "CMZ");
+    
+    let output = solve(Box::new(lines), Part::Part2);
+    assert_eq!(output.as_str(), "MCD");
 }

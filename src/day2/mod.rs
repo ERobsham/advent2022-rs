@@ -1,4 +1,4 @@
-use std::io::{stdin, stdout, Result, Write};
+use crate::Part;
 
 trait ScoreValue {
     fn val(&self) -> usize;
@@ -106,37 +106,28 @@ impl ScoreValue for Outcome {
     }
 }
 
-fn main() {
-
-    let mut lines = stdin().lines();
-
-    // do something
-    let total = calc_total_score(&mut lines);
-
-    let mut out = stdout().lock();
-    out.write_all(format!("{}\n", total).as_bytes())
-        .expect("should be able to write to stdout");
-}
-
-fn calc_total_score(lines: &mut dyn Iterator<Item=Result<String>>) -> usize {
+pub(crate) fn solve(mut input: Box<dyn Iterator<Item = String>>, part: Part) -> String {
 
     let mut total_score:usize = 0;
 
-    while let Some(Ok(line)) = lines.next() {
+    while let Some(line) = input.next() {
         if let Some((left, right)) = line.split_once(' ') {
             let opponent_move:Move = left.into();
             
-            // part 1
-            // let our_move:Move = right.into();
-            // total_score += calc_score(&our_move, &opponent_move);
-            
-            // part 2
-            let outcome:Outcome = right.into();
-            total_score += calc_score_from(&opponent_move, &outcome);
+            total_score += match part {
+                Part::Part1 => {
+                    let our_move:Move = right.into();
+                    calc_score(&our_move, &opponent_move)
+                },
+                Part::Part2 => {
+                    let outcome:Outcome = right.into();
+                    calc_score_from(&opponent_move, &outcome)
+                }
+            };
         }
     }
 
-    total_score
+    format!("{}", total_score)
 }
 
 fn calc_score(us: &Move, them: &Move) -> usize {
@@ -149,4 +140,23 @@ fn calc_score_from(them: &Move, outcome: &Outcome) -> usize {
     let our_move: Move = (them, outcome).into();
 
     our_move.val() + outcome.val()
+}
+
+
+
+#[test]
+// sanity check vs example input
+fn test_input() {
+    const EXAMPLE: &str = r"A Y
+B X
+C Z";
+
+    let lines = EXAMPLE.split('\n')
+        .map(|item| String::from(item));
+
+    let output = solve(Box::new(lines.clone()), Part::Part1);
+    assert_eq!(output.as_str(), "15");
+    
+    let output = solve(Box::new(lines), Part::Part2);
+    assert_eq!(output.as_str(), "12");
 }

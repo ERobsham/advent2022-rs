@@ -1,4 +1,6 @@
-use std::{io::{stdin, stdout, Result, Write}, fmt::Display};
+use std::fmt::Display;
+
+use crate::Part;
 
 const LOWERCASE_OFFSET: u8 = 96;
 const UPPERCASE_OFFSET: u8 = 38;
@@ -54,42 +56,45 @@ impl Display for ItemFlag {
     }
 }
 
-fn main() {
+pub(crate) fn solve(input: Box<dyn Iterator<Item = String>>, part: Part) -> String {
 
-    let mut lines = stdin().lines();
+    let total = match part {
+        Part::Part1 => calc_total_priorities_pt1(input),
+        Part::Part2 => calc_total_priorities_pt2(input),
+    };
 
-    let total = calc_total_priorities(&mut lines);
-
-    let mut out = stdout().lock();
-    out.write_all(format!("{}\n", total).as_bytes())
-        .expect("should be able to write to stdout");
+    format!("{}", total)
 }
 
-fn calc_total_priorities(lines: &mut dyn Iterator<Item=Result<String>>) -> usize {
+fn calc_total_priorities_pt1(mut lines: Box<dyn Iterator<Item = String>>) -> usize {
 
     let mut total_score: usize = 0;
     
-    // pt2
+    while let Some(line) = lines.next() {
+        let split_idx = line.len() / 2;
+        let (left, right) = line.split_at(split_idx);
+
+        let mut part1 = ItemFlag { flag:0 };
+        let mut part2 = ItemFlag { flag:0 };
+
+        left.as_bytes().iter().for_each(|item | part1.add(item));
+        right.as_bytes().iter().for_each(|item | part2.add(item));
+        
+        let result = part1.intersect(&part2);
+
+        total_score += result.priority_value();
+    }
+
+    total_score
+}
+fn calc_total_priorities_pt2(mut lines: Box<dyn Iterator<Item = String>>) -> usize {
+
+    let mut total_score: usize = 0;
+    
     let mut idx: usize = 0;
     let mut group = (ItemFlag{flag:0}, ItemFlag{flag:0}, ItemFlag{flag:0});
 
-    while let Some(Ok(line)) = lines.next() {
-        // pt1
-        // let split_idx = line.len() / 2;
-        // let (left, right) = line.split_at(split_idx);
-
-        // let mut part1 = ItemFlag { flag:0 };
-        // let mut part2 = ItemFlag { flag:0 };
-
-        // left.as_bytes().iter().for_each(|item | part1.add(item));
-        // right.as_bytes().iter().for_each(|item | part2.add(item));
-        
-        // let result = part1.intersect(&part2);
-
-        // total_score += result.priority_value();
-        
-
-        // pt2
+    while let Some(line) = lines.next() {
         let mut pack = ItemFlag { flag:0 };
         line.as_bytes().iter().for_each(|item | pack.add(item));
         
@@ -112,8 +117,6 @@ fn calc_total_priorities(lines: &mut dyn Iterator<Item=Result<String>>) -> usize
 
         idx += 1;
     }
-
-    // pt2
     total_score += calc_group_priorities(&group);
 
     total_score
@@ -136,7 +139,7 @@ fn test_utf8_vals() {
     let cap_a = "A".as_bytes()[0];
     let cap_z = "Z".as_bytes()[0];
 
-    print!("a:{} - z:{} | A:{} - Z:{} \n", a, z, cap_a, cap_z);
+    // print!("a:{} - z:{} | A:{} - Z:{} \n", a, z, cap_a, cap_z);
 
     assert_eq!(a - u8::try_from(LOWERCASE_OFFSET).unwrap(), 1);
     assert_eq!(z - u8::try_from(LOWERCASE_OFFSET).unwrap(), 26);
@@ -148,13 +151,13 @@ fn test_utf8_vals() {
 #[test]
 // quick visualization of the bits flagged for each character parsed.
 fn test_flags() {
-
+    
     let a = "a".as_bytes()[0];
     let b = "b".as_bytes()[0];
     let c = "c".as_bytes()[0];
     let z = "z".as_bytes()[0];
-
-
+    
+    
     let cap_a = "A".as_bytes()[0];
     let cap_x = "X".as_bytes()[0];
     let cap_y = "Y".as_bytes()[0];
@@ -166,37 +169,31 @@ fn test_flags() {
     items.add(&b);
     items.add(&c);
     items.add(&z);
-
+    
     items.add(&cap_a);
     items.add(&cap_x);
     items.add(&cap_y);
     items.add(&cap_z);
-
-    println!("ItemFlags:  {}", items);
+    
+    // println!("ItemFlags:  {}", items);
+    assert_eq!(items.flag, 0b11100000000000000000000001_10000000000000000000000111_u64);
 }
 
 #[test]
 // sanity check vs example input
 fn test_input() {
-    let file_contents: String = (r"vJrwpWtwJgWrhcsFMMfFFhFp
+    const EXAMPLE: &str = r"vJrwpWtwJgWrhcsFMMfFFhFp
 jqHRNqRjqzjGDLGLrsFMfFZSrLrFZsSL
 PmmdzqPrVvPwwTWBwg
 wMqvLMZHhHMvwLHjbvcjnnSBnvTQFn
 ttgJtRGJQctTZtZT
-CrZsJsPPZsGzwwsLwLmpwMDw").into();
-    let file_contents: Result<String> = Ok(file_contents);
+CrZsJsPPZsGzwwsLwLmpwMDw";
 
-    match file_contents {
-        Ok(input) => {
-            let mut lines = input.split('\n')
-                .map(|item| Ok(String::from(item)));
+    let lines = EXAMPLE.split('\n')
+        .map(|item| String::from(item));
 
-
-            let total = calc_total_priorities(&mut lines);
-
-            println!("total : {}", total);
-        },
-        Err(err) => println!("couldnt read input: {:?}", err),
-    }
-
+    let output = solve(Box::new(lines.clone()), Part::Part1);
+    assert_eq!(output.as_str(), "157");
+    let output = solve(Box::new(lines.clone()), Part::Part2);
+    assert_eq!(output.as_str(), "70");
 }

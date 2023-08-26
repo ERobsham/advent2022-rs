@@ -7,6 +7,7 @@ mod day4;
 mod day5;
 mod day6;
 mod day7;
+mod day8;
 
 use clap::ValueEnum;
 
@@ -24,6 +25,7 @@ pub enum Day {
     Day5,
     Day6,
     Day7,
+    Day8,
 }
 #[derive(Clone, ValueEnum)]
 pub enum Part {
@@ -42,6 +44,7 @@ impl Solve for Day {
             Day::Day5 => day5::solve(input, part),
             Day::Day6 => day6::solve(input, part),
             Day::Day7 => day7::solve(input, part),
+            Day::Day8 => day8::solve(input, part),
         }
     }    
 }

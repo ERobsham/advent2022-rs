@@ -1,14 +1,14 @@
 
 
-mod day1;
-mod day2;
-mod day3;
-mod day4;
-mod day5;
-mod day6;
-mod day7;
-mod day8;
-mod day9;
+mod day01;
+mod day02;
+mod day03;
+mod day04;
+mod day05;
+mod day06;
+mod day07;
+mod day08;
+mod day09;
 
 use clap::ValueEnum;
 
@@ -39,15 +39,15 @@ pub enum Part {
 impl Solve for Day {
     fn solve(&self, input: Box<dyn Iterator<Item = String>>, part: Part) -> String {
         match self {
-            Day::Day1 => day1::solve(input, part),
-            Day::Day2 => day2::solve(input, part),
-            Day::Day3 => day3::solve(input, part),
-            Day::Day4 => day4::solve(input, part),
-            Day::Day5 => day5::solve(input, part),
-            Day::Day6 => day6::solve(input, part),
-            Day::Day7 => day7::solve(input, part),
-            Day::Day8 => day8::solve(input, part),
-            Day::Day9 => day9::solve(input, part),
+            Day::Day1 => day01::solve(input, part),
+            Day::Day2 => day02::solve(input, part),
+            Day::Day3 => day03::solve(input, part),
+            Day::Day4 => day04::solve(input, part),
+            Day::Day5 => day05::solve(input, part),
+            Day::Day6 => day06::solve(input, part),
+            Day::Day7 => day07::solve(input, part),
+            Day::Day8 => day08::solve(input, part),
+            Day::Day9 => day09::solve(input, part),
         }
     }    
 }

@@ -53,7 +53,7 @@ impl CPU {
 
     fn new() -> Self {
         Self { 
-            cycle: 0, 
+            cycle: 1,
             register_x: 1, 
             current_instruction: None, 
             instruction_queue: VecDeque::new(), 
@@ -159,7 +159,7 @@ pub(crate) fn solve(input: Box<dyn Iterator<Item = String>>, part: Part) -> Stri
 fn calc_signal_strength_totals(mut input: Box<dyn Iterator<Item = String>>, start: usize, interval: usize) -> isize {
     
     let mut cpu = CPU::new();
-    cpu.install_interrupt(Interrupt { interval: start, repeats: false });
+    cpu.install_interrupt(Interrupt { interval: start-1, repeats: false });
 
     while let Some(line) = input.next() {
         let instruction = Instruction::from(line.as_str());

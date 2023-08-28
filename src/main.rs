@@ -15,7 +15,7 @@ use advent::{Day, Part, Solve};
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
-    #[arg(value_enum, default_value_t = Day::Day1)]
+    #[arg(value_enum, default_value_t = Day::Day01)]
     day: Day,
     #[arg(value_enum, default_value_t = Part::Part1)]
     part: Part,

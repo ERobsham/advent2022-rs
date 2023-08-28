@@ -3,11 +3,13 @@ use std::{collections::VecDeque, ops::{AddAssign, SubAssign}};
 
 use crate::Part;
 
-const START_CYCLE:usize = 20;
+const START_CYCLE_PT1:usize = 20;
 const CYCLE_INTERVAL:usize = 40;
 
 const ADDX_CYCLES:usize = 2;
 const NOOP_CYCLES:usize = 1;
+
+const LINE_WIDTH:usize = 40;
 
 type CyclesRemaining = usize;
 type CycleToFire = usize;
@@ -42,6 +44,7 @@ enum CycleState {
 struct CPU {
     cycle: usize,
     register_x: isize,
+    line_buffer: Vec<char>,
     
     current_instruction: Option<(Instruction, CyclesRemaining)>,
     instruction_queue: VecDeque<Instruction>,
@@ -55,6 +58,7 @@ impl CPU {
         Self { 
             cycle: 1,
             register_x: 1, 
+            line_buffer: Vec::new(),
             current_instruction: None, 
             instruction_queue: VecDeque::new(), 
             interrupt: None,
@@ -107,6 +111,13 @@ impl CPU {
             }
         }
 
+        // write the line buffer before the Instruction is 'run'.
+        let x1 = self.register_x-1;
+        let x2 = self.register_x+1;
+        let lx = ((self.cycle-1) % LINE_WIDTH) as isize;
+        let c = if lx >= x1 && lx <= x2 { '#' } else { '.' };
+        self.line_buffer.push(c);
+
         // finally, perform the work
         match &mut self.current_instruction {
             Some((instruction, cycles_remaining)) => {
@@ -144,29 +155,43 @@ impl CPU {
         (self.cycle as isize) * self.register_x
     }
 
+    // gets the current state of the line buffer (with '\n' appended to it),
+    // and then clears the line buffer.
+    fn get_line_buffer(&mut self) -> String {
+        let line = 
+            self.line_buffer
+                .iter()
+                .fold(String::new(), |mut acc, c| { 
+                    acc.push(*c);
+                    acc
+                });
+        self.line_buffer.clear();
+        line + "\n"
+    }
+
 }
 
 
-pub(crate) fn solve(input: Box<dyn Iterator<Item = String>>, part: Part) -> String {
-    
-    let total = match part {
-        Part::Part1 => calc_signal_strength_totals(input, START_CYCLE, CYCLE_INTERVAL),
-        Part::Part2 => 0,
-    };
-    format!("{}", total)
-}
+pub(crate) fn solve(mut input: Box<dyn Iterator<Item = String>>, part: Part) -> String {
 
-fn calc_signal_strength_totals(mut input: Box<dyn Iterator<Item = String>>, start: usize, interval: usize) -> isize {
-    
     let mut cpu = CPU::new();
-    cpu.install_interrupt(Interrupt { interval: start-1, repeats: false });
 
     while let Some(line) = input.next() {
         let instruction = Instruction::from(line.as_str());
         cpu.schedule_instruction(instruction);
     }
+    
+    match part {
+        Part::Part1 => calc_signal_strength_totals(cpu, START_CYCLE_PT1, CYCLE_INTERVAL),
+        Part::Part2 => accumulate_line_buffers(cpu, CYCLE_INTERVAL, CYCLE_INTERVAL),
+    }
+}
 
+fn calc_signal_strength_totals(mut cpu: CPU, start: usize, interval: usize) -> String {
+    
+    cpu.install_interrupt(Interrupt { interval: start-1, repeats: false });
     cpu.run_until_interrupt();
+
     cpu.install_interrupt(Interrupt { interval, repeats: true });
 
     let mut total = cpu.current_signal_strength();
@@ -177,7 +202,22 @@ fn calc_signal_strength_totals(mut input: Box<dyn Iterator<Item = String>>, star
         }
     }
 
-    total
+    format!("{}", total)
+}
+
+fn accumulate_line_buffers(mut cpu: CPU, _start: usize, interval: usize) -> String {
+    
+    let mut lines = String::new();
+    cpu.install_interrupt(Interrupt { interval, repeats: true });
+    
+    loop {
+        match cpu.run_until_interrupt() {
+            CycleState::Interrupted => lines += &cpu.get_line_buffer(),
+            _ => break,
+        }
+    }
+
+    lines.trim_end().to_string()
 }
 
 
@@ -337,6 +377,27 @@ noop";
     let output = solve(Box::new(lines.clone()), Part::Part1);
     assert_eq!(output.as_str(), "13140");
     
-    // let output = solve(Box::new(lines), Part::Part2);
-    // assert_eq!(output.as_str(), "45000");
+    let output = solve(Box::new(lines), Part::Part2);
+    assert_eq!(output.as_str(), 
+r"##..##..##..##..##..##..##..##..##..##..
+###...###...###...###...###...###...###.
+####....####....####....####....####....
+#####.....#####.....#####.....#####.....
+######......######......######......####
+#######.......#######.......#######.....");
+}
+
+#[cfg(test_output)]
+#[test]
+fn test_input_file() {
+    const EXAMPLE: &str = r"input/day-10";
+
+    let input_file = std::fs::read_to_string(EXAMPLE).unwrap();
+    let lines:Vec<String> = input_file.split('\n')
+        .map(|item| String::from(item)).collect();
+    let input = Box::new(lines.into_iter());
+        
+    
+    let output = solve(input, Part::Part2);
+    println!("{}", output);
 }
